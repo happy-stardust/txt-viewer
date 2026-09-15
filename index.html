@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>아이패드 파일 선택 테스트</title>
+    <title>아이패드 파일 미리보기 테스트</title>
     <style>
         body {
             margin: 0;
@@ -29,7 +29,7 @@
         }
 
         .file-upload-button {
-            background-color: #007aff; /* iOS 기본 파란색 */
+            background-color: #007aff;
             color: #ffffff;
             padding: 12px 24px;
             border-radius: 8px;
@@ -40,7 +40,6 @@
             display: inline-block;
         }
 
-        /* 실제 파일 input은 투명하게 만들어 버튼 위에 덮어씌움 (iOS 터치 버그 방지) */
         .file-upload-wrapper input[type=file] {
             font-size: 100px;
             position: absolute;
@@ -52,24 +51,59 @@
             cursor: pointer;
         }
 
-        /* 본문 내용 */
+        /* 본문 및 미리보기 영역 */
         .content {
             padding: 40px 24px;
             text-align: center;
             color: #1d1d1f;
         }
 
-        #fileNameDisplay {
-            margin-top: 24px;
-            font-size: 18px;
-            font-weight: 500;
-            color: #007aff;
+        #previewArea {
+            margin-top: 30px;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 20px;
+            box-sizing: border-box;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 미리보기 요소 스타일 */
+        img {
+            max-width: 100%;
+            max-height: 60vh;
+            border-radius: 8px;
+        }
+        iframe {
+            width: 100%;
+            height: 60vh;
+            border: none;
+        }
+        pre {
+            text-align: left;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            width: 100%;
+            max-height: 60vh;
+            overflow-y: auto;
+            background: #f4f4f4;
+            padding: 16px;
+            border-radius: 8px;
+            box-sizing: border-box;
         }
     </style>
 </head>
 <body>
 
-    <!-- 우측 상단 파일 선택 영역 -->
     <div class="header">
         <div class="file-upload-wrapper">
             <button class="file-upload-button">파일 고르기</button>
@@ -77,24 +111,61 @@
         </div>
     </div>
 
-    <!-- 메인 화면 -->
     <div class="content">
-        <h2>파일 업로드 테스트</h2>
-        <p>우측 상단의 <strong>'파일 고르기'</strong> 버튼을 눌러 파일 앱이나 사진첩이 정상적으로 열리는지 확인해 보세요.</p>
-        <p id="fileNameDisplay">아직 선택된 파일이 없습니다.</p>
+        <h2>파일 미리보기 테스트</h2>
+        <p>파일을 고르면 아래 영역에 내용이 표시됩니다.</p>
+        
+        <!-- 미리보기가 표시될 영역 -->
+        <div id="previewArea">
+            <p style="color: #86868b;">선택된 파일이 없습니다.</p>
+        </div>
     </div>
 
     <script>
-        // 파일이 선택되었을 때 이름을 표시해 주는 스크립트
         const fileInput = document.getElementById('fileInput');
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const previewArea = document.getElementById('previewArea');
 
         fileInput.addEventListener('change', function(event) {
             const file = event.target.files[0];
-            if (file) {
-                fileNameDisplay.textContent = `선택 완료: ${file.name}`;
-            } else {
-                fileNameDisplay.textContent = "아직 선택된 파일이 없습니다.";
+            
+            if (!file) {
+                previewArea.innerHTML = '<p style="color: #86868b;">선택된 파일이 없습니다.</p>';
+                return;
+            }
+
+            // 영역 초기화 및 로딩 표시
+            previewArea.innerHTML = '<p>파일을 불러오는 중...</p>';
+            
+            // 파일의 임시 URL 생성
+            const fileURL = URL.createObjectURL(file);
+
+            // 1. 이미지 파일인 경우
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = fileURL;
+                img.onload = () => { previewArea.innerHTML = ''; previewArea.appendChild(img); };
+            } 
+            // 2. PDF 파일인 경우
+            else if (file.type === 'application/pdf') {
+                const iframe = document.createElement('iframe');
+                iframe.src = fileURL;
+                previewArea.innerHTML = '';
+                previewArea.appendChild(iframe);
+            } 
+            // 3. 텍스트 문서인 경우
+            else if (file.type.startsWith('text/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const pre = document.createElement('pre');
+                    pre.textContent = e.target.result;
+                    previewArea.innerHTML = '';
+                    previewArea.appendChild(pre);
+                };
+                reader.readAsText(file);
+            } 
+            // 4. 미리보기를 지원하지 않는 형식
+            else {
+                previewArea.innerHTML = `<p><strong>${file.name}</strong><br>미리보기를 지원하지 않는 파일 형식입니다.</p>`;
             }
         });
     </script>
